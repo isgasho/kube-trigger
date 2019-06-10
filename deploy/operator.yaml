@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-trigger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: kube-trigger
+  template:
+    metadata:
+      labels:
+        name: kube-trigger
+    spec:
+      serviceAccountName: kube-trigger
+      containers:
+        - name: kube-trigger
+          # Replace this with the built image name
+          image: REPLACE_IMAGE
+          command:
+          - kube-trigger
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "kube-trigger"
