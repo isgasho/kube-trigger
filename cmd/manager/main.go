@@ -12,6 +12,7 @@ import (
 
 	"github.com/caitong93/kube-trigger/pkg/apis"
 	"github.com/caitong93/kube-trigger/pkg/controller"
+	"github.com/caitong93/kube-trigger/pkg/trigger"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -20,6 +21,7 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -114,6 +116,11 @@ func main() {
 	if err != nil {
 		log.Info(err.Error())
 	}
+
+	// Setup trigger.
+	kc := kubernetes.NewForConfigOrDie(mgr.GetConfig())
+	trigger.Init(kc, log.WithName("trigger"))
+	defer trigger.Stop()
 
 	log.Info("Starting the Cmd.")
 

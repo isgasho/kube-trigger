@@ -1,0 +1,7 @@
+apiVersion: app.example.com/v1alpha1
+kind: TriggerRule
+metadata:
+  name: example-triggerrule
+spec:
+  # Add fields here
+  size: 3
