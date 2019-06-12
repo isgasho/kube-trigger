@@ -8,7 +8,6 @@ import (
 	"github.com/caitong93/kube-trigger/pkg/trigger"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,13 +37,15 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileTriggerRule{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
-func enqueTriggerRuleForConfig(c client.Client) handler.ToRequestsFunc {
+// Issue: cannot get kind information using o.Object.GetObjectKind() due to https://github.com/kubernetes/client-go/issues/541
+// To workaround this here pass kind as a parameter.
+func enqueTriggerRuleForConfig(c client.Client, kind string) handler.ToRequestsFunc {
 	return func(o handler.MapObject) []reconcile.Request {
 		rules := &appv1alpha1.TriggerRuleList{}
 		ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 		defer cancel()
 		if err := c.List(ctx, &client.ListOptions{}, rules); err != nil {
-			log.Error(err, "err list rollouts")
+			log.Error(err, "err list rules")
 			return nil
 		}
 
@@ -53,13 +54,14 @@ func enqueTriggerRuleForConfig(c client.Client) handler.ToRequestsFunc {
 		for _, item := range rules.Items {
 			for _, src := range item.Spec.Sources {
 				ref := src.ObjectRef
-				if ref.Kind == o.Object.GetObjectKind().GroupVersionKind().Kind && ref.Namespace == o.Meta.GetNamespace() && ref.Name == o.Meta.GetName() {
+				if ref.Kind == kind && ref.Namespace == o.Meta.GetNamespace() && ref.Name == o.Meta.GetName() {
 					reqs = append(reqs, reconcile.Request{
 						NamespacedName: types.NamespacedName{
-							Namespace: ref.Namespace,
-							Name:      ref.Name,
+							Namespace: item.Namespace,
+							Name:      item.Name,
 						},
 					})
+					break
 				}
 			}
 		}
@@ -81,8 +83,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to ConfigMaps and Secrets and requeue the related TriggerRule
-	if err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: enqueTriggerRuleForConfig(mgr.GetClient())}); err != nil {
+	// Watch for changes to ConfigMaps and requeue the related TriggerRule
+	if err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: enqueTriggerRuleForConfig(mgr.GetClient(), "ConfigMap")}); err != nil {
+		return err
+	}
+
+	// Watch for changes to Secrets and requeue the related TriggerRule
+	if err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: enqueTriggerRuleForConfig(mgr.GetClient(), "Secret")}); err != nil {
 		return err
 	}
 
@@ -128,27 +135,4 @@ func (r *ReconcileTriggerRule) Reconcile(request reconcile.Request) (reconcile.R
 	trigger.Add(request.NamespacedName, instance)
 
 	return reconcile.Result{}, nil
-}
-
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *appv1alpha1.TriggerRule) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
-		},
-	}
 }
