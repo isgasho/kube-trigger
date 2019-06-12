@@ -28,6 +28,9 @@ spec:
       namespace: kubetrigger-statefulset-1560220263
 ```
 
+Check [exmaples](./examples/README.md) for setting up kube-trigger in your cluster.
+
+
 ### Why kube-trigger?
 
 Kubernetes has a [historical issue](https://github.com/kubernetes/kubernetes/issues/22368) that people wants to automatically rollout their configmaps. 
@@ -55,6 +58,7 @@ More important, sources and actions in kube-trigger can be extended(eg. source c
 
 - golang environment(1.12, with go mudule enabled)
 - docker (used for creating container images, etc.) 
+- [operator-sdk](https://github.com/operator-framework/operator-sdk)
 - [kind](https://github.com/kubernetes-sigs/kind) or minikube (optional)
 
 ### Build Image 
