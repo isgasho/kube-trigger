@@ -208,7 +208,7 @@ func (t *DefaultTrigger) updatePodTemplate(ctx context.Context, rule *appv1alpha
 			return nil
 		}
 
-		pt, err := generatePatch(rec, annotationKey)
+		pt, err := generatePatch(rec, annotationKey, d.Spec.Template.Annotations == nil)
 		if err != nil {
 			return fmt.Errorf("err generate patch: %v", err)
 		}
@@ -233,7 +233,7 @@ func (t *DefaultTrigger) updatePodTemplate(ctx context.Context, rule *appv1alpha
 			return nil
 		}
 
-		pt, err := generatePatch(rec, annotationKey)
+		pt, err := generatePatch(rec, annotationKey, sts.Spec.Template.Annotations == nil)
 		if err != nil {
 			return fmt.Errorf("err generate patch: %v", err)
 		}
@@ -258,7 +258,7 @@ func (t *DefaultTrigger) updatePodTemplate(ctx context.Context, rule *appv1alpha
 			return nil
 		}
 
-		pt, err := generatePatch(rec, annotationKey)
+		pt, err := generatePatch(rec, annotationKey, ds.Spec.Template.Annotations == nil)
 		if err != nil {
 			return fmt.Errorf("err generate patch: %v", err)
 		}

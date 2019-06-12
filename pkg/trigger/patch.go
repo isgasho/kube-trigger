@@ -34,19 +34,32 @@ func escapeJSONPointerValue(in string) string {
 }
 
 // FIXME: annotations may not exist, in this case we should patch to add entire annotations field.
-func generatePatch(rec *Record, key string) ([]byte, error) {
+func generatePatch(rec *Record, key string, empty bool) ([]byte, error) {
 	val, err := json.Marshal(rec)
 	if err != nil {
 		return nil, fmt.Errorf("err encode %#v: %v", rec, err)
 	}
 
-	pt, err := json.Marshal([]interface{}{
-		map[string]interface{}{
-			"op":    "add",
-			"path":  fmt.Sprintf("/spec/template/metadata/annotations/%s", escapeJSONPointerValue(key)),
-			"value": string(val),
-		},
-	})
+	var pt []byte
+	if empty {
+		pt, err = json.Marshal([]interface{}{
+			map[string]interface{}{
+				"op":   "add",
+				"path": "/spec/template/metadata/annotations",
+				"value": map[string]string{
+					key: string(val),
+				},
+			},
+		})
+	} else {
+		pt, err = json.Marshal([]interface{}{
+			map[string]interface{}{
+				"op":    "add",
+				"path":  fmt.Sprintf("/spec/template/metadata/annotations/%s", escapeJSONPointerValue(key)),
+				"value": string(val),
+			},
+		})
+	}
 
 	return pt, nil
 }
