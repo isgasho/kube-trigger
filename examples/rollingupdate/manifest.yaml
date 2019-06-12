@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: example-rollingupdate
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox
+  namespace: example-rollingupdate
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: busybox
+  template:
+    metadata:
+      labels:
+        app: busybox
+    spec:
+      containers:
+        - name: busybox
+          image: busybox
+          command: ["tail"]
+          args: ["-f","/app/config/data", "/app/secret/data"]
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+          - name: config
+            mountPath: /app/config
+          - name: secret
+            mountPath: /app/secret
+      volumes: 
+      - name: config
+        configMap:
+          name: busybox-config
+      - name: secret
+        secret:
+          secretName: busybox-secret
+---
+apiVersion: v1
+data:
+  data: Hello
+kind: ConfigMap
+metadata:
+  name: busybox-config
+  namespace: example-rollingupdate
+---
+apiVersion: v1
+data:
+  data: SGVsbG8K
+kind: Secret
+metadata:
+  name: busybox-secret
+  namespace: example-rollingupdate
+---
+apiVersion: app.example.com/v1alpha1
+kind: TriggerRule
+metadata:
+  name: busybox
+  namespace: example-rollingupdate
+spec:
+  actions:
+  - updatePodTemplate:
+      objectRef:
+        kind: Deployment
+        name: busybox
+        namespace: example-rollingupdate
+  sources:
+  - objectRef:
+      kind: ConfigMap
+      name: busybox-config
+      namespace: example-rollingupdate
+  - objectRef:
+      kind: Secret
+      name: busybox-secret
+      namespace: example-rollingupdate
